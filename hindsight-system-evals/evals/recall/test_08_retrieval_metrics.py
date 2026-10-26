@@ -22,7 +22,7 @@ were extracted once by a real model and frozen as
 restores that archive instead of retaining, so nothing calls an LLM:
 
     HINDSIGHT_EVAL_LLM_PROVIDER=none HINDSIGHT_EVAL_LLM_MODEL=none \
-      uv run pytest tests evals/test_08_retrieval_metrics.py
+      uv run pytest tests evals/recall/test_08_retrieval_metrics.py
 
 It stays in `system-evals` rather than `system-tests` for one reason: that suite
 stubs the embedder AND the reranker with lexical stand-ins, and an nDCG measured

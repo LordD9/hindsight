@@ -10,11 +10,11 @@ Run it with the gate on and off to compare them. Both keep the decision model, s
 only difference is whether a delta refresh asks it which memories to read:
 
     HINDSIGHT_EVAL_SET_DECISION_MODEL_PROVIDER=typesafe \\
-    HINDSIGHT_EVAL_SET_DECISION_MODEL_API_KEY=... uv run pytest evals/test_11_delta_updates.py --full
+    HINDSIGHT_EVAL_SET_DECISION_MODEL_API_KEY=... uv run pytest evals/refresh-pages/test_11_delta_updates.py --full
 
     HINDSIGHT_EVAL_SET_MENTAL_MODEL_DELTA_USE_DECISION_MODEL=false \\
     HINDSIGHT_EVAL_SET_DECISION_MODEL_PROVIDER=typesafe \\
-    HINDSIGHT_EVAL_SET_DECISION_MODEL_API_KEY=... uv run pytest evals/test_11_delta_updates.py --full
+    HINDSIGHT_EVAL_SET_DECISION_MODEL_API_KEY=... uv run pytest evals/refresh-pages/test_11_delta_updates.py --full
 """
 
 from __future__ import annotations

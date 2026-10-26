@@ -47,7 +47,7 @@ from hindsight_system_evals.pages import SettleFn
 
 log = logging.getLogger(__name__)
 
-BANKS = Path(__file__).resolve().parents[1] / "fixtures" / "coding-agent-banks"
+BANKS = Path(__file__).resolve().parents[2] / "fixtures" / "coding-agent-banks"
 MANIFEST = json.loads((BANKS / "manifest.json").read_text())
 
 #: Reflects per mode and bank. Wall time and correctness are compared over every run of every
