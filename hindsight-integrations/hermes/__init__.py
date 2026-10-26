@@ -369,6 +369,7 @@ _TOOL_GUIDANCE = (
     "Use hindsight_retain to store facts."
 )
 _CONTEXT_NOTE = "Relevant memories are automatically injected into context."
+_WORKER_MEMORY_MODES = {"full", "read_only", "off"}
 _SYSTEM_PROMPT_TAILS = {
     "context": _CONTEXT_NOTE,
     "tools": _TOOL_GUIDANCE,
@@ -648,6 +649,12 @@ class HindsightMemoryProvider(MemoryProvider):
             },
             {"key": "auto_retain", "description": "Automatically retain conversation turns", "default": True},
             {"key": "retain_every_n_turns", "description": "Retain every N turns (1 = every turn)", "default": 1},
+            {
+                "key": "worker_memory",
+                "description": "What kanban workers (HERMES_KANBAN_TASK set) may do with the bank: 'full' (current behaviour), 'read_only' (recall and reflect only; no auto-retain, hindsight_retain returns an error), 'off' (no Hindsight calls at all). Ignored outside kanban workers.",
+                "default": "full",
+                "choices": ["full", "read_only", "off"],
+            },
             {
                 "key": "retain_async",
                 "description": "Process retain asynchronously on the Hindsight server",
@@ -1011,7 +1018,7 @@ class HindsightMemoryProvider(MemoryProvider):
             self._recall_tags,
         )
 
-        if self._mode == "local_embedded":
+        if self._mode == "local_embedded" and self._worker_memory != "off":
             self._start_embedded_daemon()
 
     def _apply_connection_settings(self, cfg: dict) -> None:
@@ -1065,7 +1072,10 @@ class HindsightMemoryProvider(MemoryProvider):
 
     def _apply_retain_policy(self, cfg: dict) -> None:
         """Pure-config retain knobs (no env/secret reads; ``{}`` yields the defaults)."""
-        self._auto_retain = cfg.get("auto_retain", True)
+        # worker_memory narrows what a kanban worker may still do with the shared bank.
+        worker_memory = cfg.get("worker_memory", "full") if os.environ.get("HERMES_KANBAN_TASK") else "full"
+        self._worker_memory = worker_memory if worker_memory in _WORKER_MEMORY_MODES else "full"
+        self._auto_retain = cfg.get("auto_retain", True) and self._worker_memory == "full"
         self._retain_every_n_turns = max(1, int(cfg.get("retain_every_n_turns", 1)))
         self._retain_context = cfg.get("retain_context", _RETAIN_CONTEXT_DEFAULT)
         self._retain_async = cfg.get("retain_async", True)
@@ -1097,6 +1107,8 @@ class HindsightMemoryProvider(MemoryProvider):
             self._recall_types = list([] if configured_types is None else configured_types) or ["observation"]
         self._recall_prompt_preamble = cfg.get("recall_prompt_preamble", "")
         self._recall_indicator = bool(cfg.get("recall_indicator", True))
+        if self._worker_memory == "off":
+            self._auto_recall = False
 
     def _start_embedded_daemon(self) -> None:
         """Start the embedded daemon on a background thread (Rich output -> log file)."""
@@ -1176,6 +1188,8 @@ class HindsightMemoryProvider(MemoryProvider):
             _log(f"\n=== Daemon startup failed: {e} ===\n" + traceback.format_exc())
 
     def system_prompt_block(self) -> str:
+        if self._worker_memory == "off":
+            return ""
         mode = self._memory_mode if self._memory_mode in _SYSTEM_PROMPT_TAILS else "hybrid"
         label = "" if mode == "hybrid" else f" ({mode} mode)"
         return f"# Hindsight Memory\nActive{label}. Bank: {self._bank_id}, budget: {self._budget}.\n{_SYSTEM_PROMPT_TAILS[mode]}"
@@ -1466,7 +1480,9 @@ class HindsightMemoryProvider(MemoryProvider):
     # -- tools -------------------------------------------------------------------
 
     def get_tool_schemas(self) -> List[Dict[str, Any]]:
-        return [] if self._memory_mode == "context" else [RETAIN_SCHEMA, RECALL_SCHEMA, REFLECT_SCHEMA]
+        if self._memory_mode == "context" or self._worker_memory == "off":
+            return []
+        return [RETAIN_SCHEMA, RECALL_SCHEMA, REFLECT_SCHEMA]
 
     def _tool_retain(self, args: dict) -> str:
         content, context = args["content"], args.get("context")
@@ -1504,6 +1520,8 @@ class HindsightMemoryProvider(MemoryProvider):
     def handle_tool_call(self, tool_name: str, args: dict, **kwargs) -> str:
         if tool_name not in self._TOOL_HANDLERS:
             return tool_error(f"Unknown tool: {tool_name}")
+        if self._worker_memory == "off" or (self._worker_memory == "read_only" and tool_name == "hindsight_retain"):
+            return tool_error(f"{tool_name} is disabled for kanban workers (worker_memory={self._worker_memory})")
         required, handler, failure = self._TOOL_HANDLERS[tool_name]
         if not args.get(required, ""):
             return tool_error(f"Missing required parameter: {required}")

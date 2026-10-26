@@ -240,6 +240,7 @@ Config file: `~/.hermes/hindsight/config.json`
 |-----|---------|-------------|
 | `auto_retain` | `true` | Automatically retain conversation turns |
 | `retain_async` | `true` | Process retain asynchronously on the Hindsight server |
+| `worker_memory` | `full` | What kanban workers (runs with `HERMES_KANBAN_TASK` set) may do with the bank they share with the main agent: `full` (current behaviour), `read_only` (recall and reflect only; no auto-retain, `hindsight_retain` returns an error), `off` (no Hindsight calls). Ignored outside kanban workers. |
 | `retain_every_n_turns` | `1` | Retain every N turns (1 = every turn) |
 | `retain_context` | `conversation between Hermes Agent and the User` | Context label for retained memories |
 | `retain_tags` | — | Default tags applied to retained memories; merged with per-call tool tags |
