@@ -273,7 +273,7 @@ Because nothing calls a model, this is the one suite that needs no credentials:
 
 ```bash
 HINDSIGHT_EVAL_LLM_PROVIDER=none HINDSIGHT_EVAL_LLM_MODEL=none \
-  uv run pytest tests evals/test_08_retrieval_metrics.py        # ~2.5 minutes
+  uv run pytest tests evals/recall/test_08_retrieval_metrics.py        # ~2.5 minutes
 
 # rebuild the archive, against a server configured with the extraction model you want
 uv run python -m hindsight_system_evals.retrieval build --api-url http://localhost:8888
@@ -354,10 +354,10 @@ scenario with that and whether it passed, so two configurations can be compared 
 cost *and* outcome — a cheaper setting only counts at the same quality:
 
 ```bash
-HINDSIGHT_EVAL_CONSOLIDATION_COST=/tmp/base.jsonl uv run pytest evals/test_09_consolidation.py --full
+HINDSIGHT_EVAL_CONSOLIDATION_COST=/tmp/base.jsonl uv run pytest evals/consolidation/test_09_consolidation.py --full
 # consolidation triage: a decision model (TypeSafe Jev) for consolidation, on for every bank
 HINDSIGHT_EVAL_SET_CONSOLIDATION_DECISION_MODEL_PROVIDER=typesafe HINDSIGHT_EVAL_SET_CONSOLIDATION_DECISION_MODEL_API_KEY=... \
-  HINDSIGHT_EVAL_CONSOLIDATION_COST=/tmp/triage.jsonl uv run pytest evals/test_09_consolidation.py --full
+  HINDSIGHT_EVAL_CONSOLIDATION_COST=/tmp/triage.jsonl uv run pytest evals/consolidation/test_09_consolidation.py --full
 ```
 
 Triage requests are traced like LLM calls (scope `decision_consolidation_triage`) and
@@ -430,11 +430,13 @@ contradicted itself under a clean refresh. One English and one Chinese case (the
 reporter's); `HINDSIGHT_EVAL_CONSISTENCY_REPEATS` (default 1) repeats each on
 fresh pages, which is how to read a rate.
 
-**`test_07` — recall returns duplicates.** Not a quality grade: it pins a
-known behaviour. With observations and consolidation off, one sentence retained
-as four documents becomes four facts, and recall hands back several copies of it.
-Observations are what merge facts; recall does not. It fails if recall starts
-returning the fact once, so that change is noticed and explained.
+**`test_12` — recall returns duplicates, unless it prunes.** With observations and
+consolidation off, one sentence retained as four documents becomes four facts, and recall
+hands back every copy: observations merge facts, recall does not. With
+`HINDSIGHT_EVAL_SET_RECALL_DECISION_MODEL_PRUNE=true` (and a decision model) the same story
+expects one copy, and three more pools stress the prune with stored-as-written facts: reworded
+repeats must collapse to one, while alike-but-distinct facts (four customers joining one
+beta, three details of one offsite) must all survive, and most unrelated facts must go.
 
 ## The corpus
 
