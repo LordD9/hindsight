@@ -739,7 +739,11 @@ CASES: tuple[Case, ...] = (
     Case(
         id="entities-named",
         capability="entities",
-        origin="concise prompt: entities are people, organizations, places, key objects; include 'user'",
+        # The place must be in the fact text. It fails on every model tried, and not by the
+        # model's fault: the extraction schema REQUIRES a "where" field, but the parser builds
+        # the stored text from what/when/who/why only and never reads it (fact_extraction.py,
+        # where combined_parts is built), so a location the model puts there is discarded.
+        origin="concise prompt: entities are people, organizations, places; 'where' is required but never stored",
         items=(
             Item(
                 "I met Dr. Amara Nwosu at the Wellcome Trust in London to discuss funding for my malaria vaccine study."
