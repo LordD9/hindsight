@@ -21,6 +21,7 @@ past session came back as a rule for the project:
 * a scheduled job was told its own instruction file's rule, ignoring the exception that same file makes.
 * a rule about one component was applied to a similar component that shares its words.
 * an older memory of a job's rule was cited against the job's own current file.
+* the last recorded pin of a dependency was held up as a rule against bumping it.
 
 **A heads-up for a request that changes nothing** (``expect_note=False``): a question or an estimate,
 a scheduled job told to follow its own instruction file, and a request that was only an issue link,
@@ -90,6 +91,29 @@ def _chat(*turns: tuple[str, str]) -> str:
 NO_NOTE_OK = " No note at all also meets the criteria."
 
 CASES = (
+    Case(
+        id="a-pin-is-moved",
+        history=(
+            Memory(
+                _chat(
+                    ("user", "bump the parser submodule and ship it"),
+                    ("assistant", "Bumped vendor/parser to 3a91c0e and merged; the pin is now 3a91c0e."),
+                ),
+                at="2026-05-10T09:00:00Z",
+            ),
+        ),
+        request="Bump vendor/parser to the latest main and open a PR.",
+        action=Action(
+            "Bash",
+            {"command": "git -C vendor/parser checkout 7be20d4 && git add vendor/parser"},
+            "+++ b/vendor/parser\n-Subproject commit 3a91c0e\n+Subproject commit 7be20d4",
+        ),
+        criteria=(
+            "No note says moving the pin from 3a91c0e to 7be20d4 goes against a decision or tells the agent to "
+            "keep 3a91c0e: the old pin was the state at the time, and the request is to bump it." + NO_NOTE_OK
+        ),
+        expect_note=False,
+    ),
     Case(
         id="the-jobs-file-is-newer-than-memory",
         history=(

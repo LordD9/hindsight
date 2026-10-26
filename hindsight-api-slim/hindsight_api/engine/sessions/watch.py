@@ -98,10 +98,12 @@ PRIORITY: dict[str, int] = {"task": 0, "plan": 1, "failure": 2, "command": 3, "e
 # old "questions go to the terminal" rule it asked to change: a request replaces a rule without naming it.
 # Three conflicts applied a rule to the wrong one of two similar parts: a rerank fallback rule to the
 # decision model, a consolidation queue limit to the decision model, a memory-scan rule to a document read.
+# And three notes in a day held up the last recorded pin of a dependency as a decision against moving it.
 DECISION = (
     "A decision is a rule meant to hold for the project from then on, made by a person or recorded in a "
     "commit or a doc. Not a decision: a choice made for one past task or run, which folder, checkout or "
-    "branch past work ran in, something an agent did or suggested, or the last known status of some work. "
+    "branch past work ran in, something an agent did or suggested, the last known status of some work, or "
+    "the commit or version something is pinned to now (moving a pin is ordinary work). "
     "Where the "
     "request or the job's own instructions say to do something, that is not a conflict. The request is "
     "the newest decision: where it changes or replaces a recorded one, even in a few words ('switch to "
