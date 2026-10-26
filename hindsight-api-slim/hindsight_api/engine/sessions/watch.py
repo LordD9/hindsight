@@ -500,6 +500,11 @@ def accept_note(state: WatchState, m: Moment, text: str, memory_ids: list[str]) 
     # not compared: going against it later is worth saying.
     if m.trigger != "task" and any(_overlap(text, c) >= 0.6 for c in state.conflicts):
         return False
+    # A heads-up for a new request says nothing new when the session was already told the same rule:
+    # in beta a dashboards rule came back, reworded, for the session's next request. (A conflict
+    # after a heads-up still goes: that one says the work now breaks it.)
+    if m.trigger == "task" and any(_overlap(text, t) >= 0.6 for t in state.sent):
+        return False
     if any(_overlap(text, s) >= SET_ASIDE_OVERLAP for s in state.set_aside):
         return False
     state.sent.append(text.strip())

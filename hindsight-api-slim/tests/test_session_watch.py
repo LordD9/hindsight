@@ -348,3 +348,14 @@ def test_a_sessions_commands_are_checked_at_most_once_a_minute():
     assert _next_command_check(s, now) == now + timedelta(seconds=W.COMMAND_CHECK_EVERY_S - 20)
     s.last_command_check = (now - timedelta(seconds=W.COMMAND_CHECK_EVERY_S + 1)).isoformat()
     assert _next_command_check(s, now) is None
+
+
+def test_a_heads_up_the_session_already_had_is_not_repeated_for_the_next_request():
+    s = W.WatchState()
+    task = W.Moment(trigger="task", text="Fix the dashboards page", recent=[], diff="")
+    first = "Before you change the dashboards: agents save definitions over MCP; /admin/dashboards draws them with Vega-Lite."
+    again = "Before you change the analytics dashboards: agents save dashboard definitions over MCP; /admin/dashboards draws them with Vega-Lite."
+    assert W.accept_note(s, task, first, ["m1"])
+    W.read_step(s, W.Step(kind="ask", text="now add a chart for retain latency to the dashboards"))
+    assert not W.accept_note(s, task, again, ["m2"])
+    assert W.accept_note(s, task, "Before you change retain metrics: latency is reported in ms, never s.", ["m3"])
