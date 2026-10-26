@@ -719,6 +719,22 @@ class SessionService:
                     settle = self._settle_at(row)
                     if state.pending is not None and state.pending.trigger in ("command", "plan"):
                         settle = max(filter(None, [settle, _next_command_check(state, row["db_now"])]), default=None)
+                    if (
+                        settle is None
+                        and state.pending is not None
+                        and state.pending.trigger in ("command", "plan", "failure")
+                        # Across banks on purpose: a count of running checks, no bank's rows read. The
+                        # reranker they queue on is one per process, shared by every bank.
+                        and await conn.fetchval(
+                            f"""
+                            SELECT count(*) FROM {fq_table("sessions")}
+                            WHERE checking_since > now() - make_interval(secs => $1)
+                            """,
+                            float(CHECK_TIMEOUT_S),
+                        )
+                        >= W.MAX_RUNNING_CHECKS
+                    ):
+                        settle = row["db_now"] + timedelta(seconds=W.BUSY_RETRY_S)
                     if state.pending is not None and settle is not None and self._engine._task_backend.can_defer:
                         # Not yet: back in the queue until the session settles. A deferral is not a
                         # failed attempt, and appends meanwhile fold into this same operation.

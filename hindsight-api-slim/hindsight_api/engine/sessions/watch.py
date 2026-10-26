@@ -60,6 +60,12 @@ RESULT_CAP = 8000
 # 6 of 35 command notes changed the work and 25 were irrelevant or wrong, and on a laptop their
 # reranks queued behind each other into timeouts. Edits, failures and requests are not held back.
 COMMAND_CHECK_EVERY_S = 60
+# At most this many checks run at once, across sessions: in beta a fan-out of 11 sessions at once
+# queued their checks behind the one reranker slot, and 12 of 38 timed out in 8 minutes. A command,
+# plan or failure check waits while that many run (its session's latest moment then takes its
+# place); an edit or a new request is never held back.
+MAX_RUNNING_CHECKS = 3
+BUSY_RETRY_S = 10
 # Words in a heads-up's "Before you change <X>" that name no code of their own.
 _GENERIC_TARGET_WORDS = frozenset(
     "code handling change changes rule rules workflow workflows documentation installation deployment "
