@@ -95,13 +95,14 @@ SAVE_EVERY_EVENTS = 300
 # One line can name several notes ("live session #10 / #21"): in beta reading only the first left
 # the other counted as not needed.
 # The coding-agents plugin has the agent name notes as thoughts: "**Thanks to Hindsight thought #12**"
-# only when it changed the work, else "Hindsight thought #12, already done" or ", set aside" (both
-# counted as not needed). The note lines stay counted for clients that use them.
+# only when it changed the work, else one plain "🧠 Hindsight thought #12 — ..." (not needed; the
+# earlier ", already done" / ", set aside" lines still count so). The note lines stay counted too.
 CREDIT_RE = re.compile(
     r"From Hindsight memory \(live session (#\d+[^)]*)\)|Hindsight thought (#\d+(?:\s*(?:/|,|and)\s*#\d+)*)\*\*"
 )
 DISMISS_RE = re.compile(
     r"Hindsight note \(live session (#\d+[^)]*)\)|Hindsight thought (#\d+(?:\s*(?:/|,|and)\s*#\d+)*), (?:set aside|already done)"
+    r"|🧠 Hindsight thought (#\d+(?:\s*(?:/|,|and)\s*#\d+)*) —"
 )
 NOTE_NUMBER_RE = re.compile(r"#(\d+)")
 # How the saved conversation reads to extraction when the client does not say: who is speaking.
@@ -402,9 +403,11 @@ class SessionService:
                             W.read_step(state, step, seq)
                     if event.kind == "message" and payload["role"] == "assistant":
                         for m in CREDIT_RE.finditer(payload["text"]):
-                            cited.update(int(n) for n in NOTE_NUMBER_RE.findall(m.group(1) or m.group(2)))
+                            cited.update(int(n) for n in NOTE_NUMBER_RE.findall(next(g for g in m.groups() if g)))
                         for m in DISMISS_RE.finditer(payload["text"]):
-                            said_unneeded.update(int(n) for n in NOTE_NUMBER_RE.findall(m.group(1) or m.group(2)))
+                            said_unneeded.update(
+                                int(n) for n in NOTE_NUMBER_RE.findall(next(g for g in m.groups() if g))
+                            )
                     rows.append((seq, event.id, event.kind, json.dumps(payload)))
                     seq += 1
                 turn_ended = any(r[2] == "turn_end" for r in rows)

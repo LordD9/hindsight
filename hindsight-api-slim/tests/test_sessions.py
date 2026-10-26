@@ -201,7 +201,7 @@ async def test_thought_lines_are_counted_like_note_lines(memory, request_context
     ][:2]
     reply = (
         f"> 🧠 **Thanks to Hindsight thought #{used}**, I kept K at 1024.\n"
-        f"> 🧠 *Hindsight thought #{unneeded}, set aside* — email masking; does not apply: no email here."
+        f"> 🧠 Hindsight thought #{unneeded} — email masking; no change: no email here."
     )
     await s.append(bank, "s1", _req({"id": "a", "role": "assistant", "text": reply}), request_context=request_context)
     summary = await s.get(bank, "s1", request_context=request_context)

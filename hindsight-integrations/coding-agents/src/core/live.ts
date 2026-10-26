@@ -23,17 +23,13 @@ export const noteCredit = (n: number | string): string =>
   `> 🧠 **Thanks to Hindsight thought #${n}**,`;
 export const NOTE_CREDIT = noteCredit("<number>");
 
-/** A thought the agent was already following: worth saying, not worth thanking. */
-export const noteConfirmed = (n: number | string): string =>
-  `> 🧠 *Hindsight thought #${n}, already done* —`;
-export const NOTE_CONFIRMED = noteConfirmed("<number>");
-
 /**
- * How the agent tells the user about a note it did not need: every note is mentioned, so the user
- * sees Hindsight at work even when it had nothing to add. The server counts both lines.
+ * Every other thought, in one plain line: every thought is mentioned, so the user sees Hindsight at
+ * work even when it changed nothing. There were three lines (thanks / already done / set aside), and
+ * agents wrote "set aside" for thoughts they had acted on: the choice is now one question, did it
+ * change what you did. The server counts this line as not needed.
  */
-export const noteDismiss = (n: number | string): string =>
-  `> 🧠 *Hindsight thought #${n}, set aside* —`;
+export const noteDismiss = (n: number | string): string => `> 🧠 Hindsight thought #${n} —`;
 export const NOTE_DISMISS = noteDismiss("<number>");
 
 /**
@@ -45,17 +41,13 @@ export const LIVE_DECLARATION =
   'surface from past sessions and commits, each starting with "🧠 Hindsight thought #<number>". A thought ' +
   "recalls a project decision, and it holds even when the request does not mention it: a fix that " +
   "contradicts a past decision is a wrong fix. Each thought says where it was recalled from: check it; " +
-  "if the source says what the thought claims, act on it as part of the task. Set it aside only if the " +
-  "source does not say so, or it does not touch your work: a thought that applies is acted on, never " +
-  "set aside. Share every thought with the user in your " +
-  "reply, one line each, by its number, so they see memory thinking. A thought that changed what you " +
-  "did (you fixed, added, avoided or undid something because of it):\n" +
+  "if the source says what the thought claims, act on it as part of the task; ignore it only if the " +
+  "source does not say so, or it does not touch your work. Share every thought with the user in your " +
+  "reply, one line each, by its number, so they see memory thinking. Ask one question: did you do " +
+  "anything differently because of it (fix, add, avoid or undo something)? If yes:\n" +
   `${NOTE_CREDIT} <what you did differently>\n` +
-  "A thought you were already following:\n" +
-  `${NOTE_CONFIRMED} <what it said>\n` +
-  "A thought that does not apply:\n" +
-  `${NOTE_DISMISS} <what it was>; does not apply: <why>\n` +
-  "Use the first line only for a thought that changed your work.";
+  "If no (you were already doing it, or it does not apply):\n" +
+  `${NOTE_DISMISS} <what it said>; no change: <why>`;
 
 /** Where the agent can read a note's source. Commit ids are this repo's own, so git can show them. */
 function whereFor(source: SessionNote["source"]): string {
@@ -75,8 +67,8 @@ export function renderNote(n: SessionNote): string {
   const quote = n.source?.quote ?? "";
   return (
     `${NOTE_LEAD.replace("thought:", `thought #${n.seq}:`)} ${n.text.trim()} Source: ${whereFor(n.source)}${quote ? ` — "${quote}"` : ""}` +
-    `. Share it with the user: "${noteCredit(n.seq)} …" if it changed what you did, ` +
-    `"${noteConfirmed(n.seq)} …" if you were already doing it, else "${noteDismiss(n.seq)} …; does not apply: …"`
+    `. Share it with the user: "${noteCredit(n.seq)} …" if you did something differently because of it, ` +
+    `else "${noteDismiss(n.seq)} …; no change: …"`
   );
 }
 

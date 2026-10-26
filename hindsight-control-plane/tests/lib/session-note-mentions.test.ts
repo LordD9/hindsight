@@ -26,12 +26,14 @@ describe("noteMentions", () => {
     const out = noteMentions([
       msg(1, "assistant", "> 🧠 **Thanks to Hindsight thought #7**, I kept K at 1024."),
       msg(3, "assistant", "> 🧠 *Hindsight thought #9, already done* — K was 1024 already."),
+      msg(4, "assistant", "> 🧠 Hindsight thought #10 — the cache rule; no change: no cache here."),
       msg(2, "assistant", "> 🧠 *Hindsight thought #8, set aside* — email rule; does not apply: no email."),
     ]);
-    expect([...out.entries()].sort()).toEqual([
+    expect([...out.entries()].sort((a, b) => a[0] - b[0])).toEqual([
       [7, "used"],
       [8, "unneeded"],
       [9, "unneeded"],
+      [10, "unneeded"],
     ]);
   });
 });

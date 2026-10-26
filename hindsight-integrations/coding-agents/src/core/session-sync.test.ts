@@ -15,14 +15,7 @@ import {
   syncSession,
   type SessionClient,
 } from "./session-sync";
-import {
-  NOTE_CREDIT,
-  NOTE_DISMISS,
-  NOTE_LEAD,
-  noteCredit,
-  noteConfirmed,
-  noteDismiss,
-} from "./live";
+import { NOTE_CREDIT, NOTE_DISMISS, NOTE_LEAD, noteCredit, noteDismiss } from "./live";
 import type { Config } from "./config";
 
 const line = (o: unknown) => `${JSON.stringify(o)}\n`;
@@ -217,7 +210,7 @@ describe("syncSession", () => {
     appendFileSync(s.transcript, prompt("u1", "Fix it."));
     const r = await syncSession(base(s, client));
     expect(r.notes).toEqual([
-      `${NOTE_LEAD.replace("thought:", "thought #3:")} Before you change units.py: K is 1024. Source: a past session (2026-10-01) — "K is 1024, never 1000.". Share it with the user: "${noteCredit(3)} …" if it changed what you did, "${noteConfirmed(3)} …" if you were already doing it, else "${noteDismiss(3)} …; does not apply: …"`,
+      `${NOTE_LEAD.replace("thought:", "thought #3:")} Before you change units.py: K is 1024. Source: a past session (2026-10-01) — "K is 1024, never 1000.". Share it with the user: "${noteCredit(3)} …" if you did something differently because of it, else "${noteDismiss(3)} …; no change: …"`,
     ]);
     await syncSession(base(s, client));
     expect(appends.map((a) => a.ack)).toEqual([0, 3]);

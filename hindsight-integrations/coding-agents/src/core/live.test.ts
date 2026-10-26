@@ -11,7 +11,6 @@ import {
   renderNote,
   sourceDiff,
   noteCredit,
-  noteConfirmed,
   noteDismiss,
 } from "./live";
 
@@ -27,17 +26,17 @@ describe("the note's source", () => {
         source: { document_id: "git:abc", quote: "memory as 1024" },
       })
     ).toBe(
-      `${NOTE_LEAD.replace("thought:", "thought #1:")} K is 1024. Source: git show abc — "memory as 1024". Share it with the user: "${noteCredit(1)} …" if it changed what you did, "${noteConfirmed(1)} …" if you were already doing it, else "${noteDismiss(1)} …; does not apply: …"`
+      `${NOTE_LEAD.replace("thought:", "thought #1:")} K is 1024. Source: git show abc — "memory as 1024". Share it with the user: "${noteCredit(1)} …" if you did something differently because of it, else "${noteDismiss(1)} …; no change: …"`
     );
     expect(renderNote({ seq: 1, text: "K is 1024." })).toBe(
-      `${NOTE_LEAD.replace("thought:", "thought #1:")} K is 1024. Source: project memory. Share it with the user: "${noteCredit(1)} …" if it changed what you did, "${noteConfirmed(1)} …" if you were already doing it, else "${noteDismiss(1)} …; does not apply: …"`
+      `${NOTE_LEAD.replace("thought:", "thought #1:")} K is 1024. Source: project memory. Share it with the user: "${noteCredit(1)} …" if you did something differently because of it, else "${noteDismiss(1)} …; no change: …"`
     );
   });
 
   it("asks the agent to mention every note: credit one it used, name one it did not need", () => {
     // The server counts these exact lines (engine/sessions/service.py CREDIT_RE / DISMISS_RE).
     expect(noteCredit(8)).toContain("**Thanks to Hindsight thought #8**");
-    expect(noteDismiss(8)).toContain("Hindsight thought #8, set aside");
+    expect(noteDismiss(8)).toBe("> 🧠 Hindsight thought #8 —");
     expect(LIVE_DECLARATION).toContain(NOTE_CREDIT);
     expect(LIVE_DECLARATION).toContain(NOTE_DISMISS);
   });
