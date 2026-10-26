@@ -26,6 +26,10 @@ signal to re-run, not proof of a regression.
 
 ## What it evaluates
 
+Evals live under `evals/` in one folder per operation: `retain/`, `recall/`,
+`consolidation/`, `refresh-pages/`, `reflect/`, and `misc/` for the rest. Run one
+operation with `uv run pytest evals/recall`.
+
 The knowledge-page and reflect suites share one corpus and grade twice per question: **correct** (meets
 its criteria — can fail on an incomplete answer) and **trap** (asserts the
 specific baited falsehood — the one that matters). The trap is asserted first.
@@ -99,7 +103,7 @@ only on purpose — every earlier baseline then measured a different bank:
 ```bash
 uv run python -m hindsight_system_evals.refresh_cost build
 # measure a candidate archive before replacing the committed one
-HINDSIGHT_EVAL_REFRESH_COST_FIXTURE=/tmp/new.zip uv run pytest evals/test_05_refresh_cost.py
+HINDSIGHT_EVAL_REFRESH_COST_FIXTURE=/tmp/new.zip uv run pytest evals/refresh-pages/test_05_refresh_cost.py
 ```
 
 `--cost-output DIR` writes `refresh-cost.json` (every call, every prompt), a
@@ -114,7 +118,7 @@ To A/B a server setting, `HINDSIGHT_EVAL_SET_<X>=v` reaches the server as
 `HINDSIGHT_API_<X>=v` (the server's environment is otherwise wiped):
 
 ```bash
-HINDSIGHT_EVAL_SET_REFLECT_PROMPT_CACHE_ENABLED=true uv run pytest evals/test_05_refresh_cost.py
+HINDSIGHT_EVAL_SET_REFLECT_PROMPT_CACHE_ENABLED=true uv run pytest evals/refresh-pages/test_05_refresh_cost.py
 ```
 
 **`test_06` — reflect reads the page it was given.** The only suite where the
@@ -425,6 +429,12 @@ rewrote the paragraph the fact was about and left the rest, so the page
 contradicted itself under a clean refresh. One English and one Chinese case (the
 reporter's); `HINDSIGHT_EVAL_CONSISTENCY_REPEATS` (default 1) repeats each on
 fresh pages, which is how to read a rate.
+
+**`test_07` — recall returns duplicates.** Not a quality grade: it pins a
+known behaviour. With observations and consolidation off, one sentence retained
+as four documents becomes four facts, and recall hands back several copies of it.
+Observations are what merge facts; recall does not. It fails if recall starts
+returning the fact once, so that change is noticed and explained.
 
 ## The corpus
 
