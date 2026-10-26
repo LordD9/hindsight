@@ -288,6 +288,7 @@ The lookup stops at the repository root. Only `bank_id` is read.
 | Key | Default | Description |
 |-----|---------|-------------|
 | `auto_retain` | `true` | Automatically retain conversation turns. Sub-agent (`delegate_task`) runs and kanban workers are never auto-retained; their parent session keeps its own turns. |
+| `worker_memory` | `full` | What kanban workers (runs with `HERMES_KANBAN_TASK` set) may do with the bank they share with the main agent: `full` (recall, reflect and explicit `hindsight_retain` writes), `read_only` (recall and reflect only; `hindsight_retain` returns an error and built-in memory writes are not mirrored to the bank), `off` (no Hindsight calls: no tools, no auto-recall, no system prompt block). Ignored outside kanban workers. Use it to keep worker task chatter, and the extraction and consolidation it triggers, out of the shared bank without a separate profile. |
 | `retain_cron` | `false` | Also auto-retain scheduled (cron) runs. Off by default, so job output stays out of the user's memory; the `hindsight_retain` tool still works in cron runs. |
 | `retain_async` | `true` | Process retain asynchronously on the Hindsight server |
 | `retain_every_n_turns` | `1` | Retain every N turns (1 = every turn) |
