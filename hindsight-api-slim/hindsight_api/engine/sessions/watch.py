@@ -180,6 +180,10 @@ class WatchState(BaseModel):
     tools: dict[str, tuple[str, dict[str, Any]]] = Field(default_factory=dict)
     pending: Pending | None = None
     goal: str = ""
+    # The two requests before the latest, newest last: a follow-up ("ok continue", "open the PR") alone
+    # hid what the session was for. In beta a conflict check saw only "ok continue your work" and held
+    # an old rule against the change the first request asked for.
+    earlier_goals: list[str] = Field(default_factory=list)
     diff: str = ""
     sent: list[str] = Field(default_factory=list)
     evidence_sent: list[str] = Field(default_factory=list)
@@ -328,6 +332,8 @@ def read_step(state: WatchState, step: Step, seq: int = 0) -> None:
             return
         said = f"the user asked: {_clip(step.text, 200)}"
         trigger, text = "task", step.text
+        if state.goal:
+            state.earlier_goals = [*state.earlier_goals, _clip(state.goal, 1000)][-2:]
         state.goal = step.text
         state.request_notes = 0
         state.request_file = ""
@@ -436,10 +442,20 @@ def _by_diff(m: Moment) -> bool:
     return m.trigger == "edit" and bool(m.diff.strip())
 
 
-def situation(goal: str, m: Moment, sent: list[str], set_aside: list[str] | None = None, request_file: str = "") -> str:
+def situation(
+    goal: str,
+    m: Moment,
+    sent: list[str],
+    set_aside: list[str] | None = None,
+    request_file: str = "",
+    earlier_goals: list[str] | None = None,
+) -> str:
     """The moment as reflect's context: what the question is about, in the agent's own voice."""
     parts = [f"MY REQUEST:\n{goal[:3000]}"]
     if m.trigger != "task":
+        # Not for a heads-up: it is about the new request alone.
+        if earlier_goals:
+            parts.insert(0, "EARLIER IN THIS SESSION I ASKED (still part of my request):\n" + "\n".join(earlier_goals))
         doing = _clip_diff(m.diff, 6000) if _by_diff(m) else m.text[:3000]
         parts.append(f"WHAT I JUST DID ({m.trigger}):\n{doing}")
         if m.recent:

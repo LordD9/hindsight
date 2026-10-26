@@ -359,3 +359,21 @@ def test_a_heads_up_the_session_already_had_is_not_repeated_for_the_next_request
     W.read_step(s, W.Step(kind="ask", text="now add a chart for retain latency to the dashboards"))
     assert not W.accept_note(s, task, again, ["m2"])
     assert W.accept_note(s, task, "Before you change retain metrics: latency is reported in ms, never s.", ["m3"])
+
+
+def test_a_follow_up_keeps_the_earlier_requests_for_conflict_checks():
+    """'ok continue' alone hid what the session was for: a conflict check sees the earlier requests too."""
+    s = W.WatchState()
+    _feed(
+        s,
+        ("message", "user", {"text": "Make the gateway rerank exactly like core's reranker"}),
+        ("message", "user", {"text": "open the PR now"}),
+        ("message", "user", {"text": "ok continue your work as expected"}),
+    )
+    assert s.earlier_goals == ["Make the gateway rerank exactly like core's reranker", "open the PR now"]
+    cmd = W.Moment(trigger="command", text="git commit -m 'rerank like core'", recent=[], diff="")
+    ctx = W.situation(s.goal, cmd, [], [], "", s.earlier_goals)
+    assert ctx.startswith("EARLIER IN THIS SESSION I ASKED (still part of my request):\nMake the gateway")
+    assert "EARLIER" not in W.situation(
+        s.goal, W.Moment(trigger="task", text=s.goal, recent=[], diff=""), [], [], "", s.earlier_goals
+    )

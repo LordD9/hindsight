@@ -81,6 +81,9 @@ class Case:
     expect_note: bool
     # A file the request points to, read by the agent before its action: (path, contents).
     job_file: tuple[str, str] | None = None
+    # A short message the user sends after the request, before the action ("ok, go on"). It comes after
+    # a stretch of routine work, as in a real session: the request is long out of the recent steps.
+    follow_up: str | None = None
 
 
 def _chat(*turns: tuple[str, str]) -> str:
@@ -284,6 +287,30 @@ CASES = (
         criteria=(
             "No note says replacing the Go service with Python breaks a rule or contradicts the recorded "
             "decision: the request itself replaced that decision." + NO_NOTE_OK
+        ),
+        expect_note=False,
+    ),
+    Case(
+        id="a-follow-up-after-the-request",
+        history=(
+            Memory(
+                _chat(
+                    ("user", "the export endpoint writes CSV with our own writer; keep that writer, no Arrow there"),
+                    ("assistant", "Kept the CSV writer in export/writer.py; Arrow stays out of the export endpoint."),
+                ),
+                at="2026-03-02T09:00:00Z",
+            ),
+        ),
+        request="make the export endpoint stream Arrow record batches like the batch job does, and drop the CSV writer",
+        follow_up="ok go on as planned",
+        action=Action(
+            "Bash",
+            {"command": "git rm -q export/writer.py && git commit -qam 'export: stream Arrow record batches'"},
+            "",
+        ),
+        criteria=(
+            "No note says moving the export endpoint to Arrow or dropping the CSV writer breaks a rule or "
+            "contradicts the recorded decision: the user's request in this session replaced it." + NO_NOTE_OK
         ),
         expect_note=False,
     ),
@@ -615,6 +642,14 @@ async def _notes(client: Hindsight, bank_id: str, case: Case, timeout: float = 1
     )
     notes: list[str] = []
     await _settle_checks(client, bank_id, session, notes, timeout)
+    if case.follow_up:
+        # Short remarks: each is a recent step, none long enough to be checked as a plan.
+        work = [{"id": f"w{i}", "role": "assistant", "content": f"Looked at part {i}, fine."} for i in range(10)]
+        work.append({"id": "f", "role": "user", "content": case.follow_up})
+        await client.sessions.append_session_events(
+            bank_id, session, SessionAppendRequest.from_dict({"messages": work})
+        )
+        await _settle_checks(client, bank_id, session, notes, timeout)
     if case.job_file:
         path, text = case.job_file
         read = {
@@ -671,5 +706,6 @@ async def test_a_note_carries_the_projects_decisions_and_only_them(
     if case.expect_note:
         assert notes, f"{case.id}: no note, though memory records a decision the work must respect"
     shown = "\n".join(f"- {n}" for n in notes) or "(no note)"
-    verdict = await evaluate(shown, case.criteria, context=f"The agent's request: {case.request}")
+    request = case.request + (f"\nThen the user said: {case.follow_up}" if case.follow_up else "")
+    verdict = await evaluate(shown, case.criteria, context=f"The agent's request: {request}")
     assert verdict.meets_criteria, f"{case.id}: {verdict.reasoning}\nnotes:\n{shown}"

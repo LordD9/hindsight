@@ -774,6 +774,7 @@ class SessionService:
                 list(state.sent),
                 list(state.set_aside),
                 state.request_file,
+                list(state.earlier_goals),
                 rc,
             )
 
@@ -803,11 +804,12 @@ class SessionService:
         sent: list[str],
         set_aside: list[str],
         request_file: str,
+        earlier_goals: list[str],
         rc: RequestContext,
     ) -> None:
         from ..memory_engine import Budget
 
-        context = W.situation(goal, m, sent, set_aside, request_file)
+        context = W.situation(goal, m, sent, set_aside, request_file, earlier_goals)
         queries = W.search_queries(m)
         t0 = time.monotonic()
         error = None
