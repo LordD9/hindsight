@@ -856,7 +856,12 @@ class SessionService:
             bool(text)
             and not error
             and await self._from_this_session_only(
-                bank_id, session_id, memory_ids, rc, source.document_id if source else None
+                # Only a source that quotes the note counts: one picked without a quote proves nothing.
+                bank_id,
+                session_id,
+                memory_ids,
+                rc,
+                source.document_id if source and source.quote else None,
             )
         )
         elsewhere = (
@@ -1005,7 +1010,13 @@ class SessionService:
                     src = await self._engine.get_memory_unit(bank_id, sid, request_context=rc)
                     docs.add((src or {}).get("document_id"))
                 if docs != {own}:
-                    return False
+                    # Mixed with older sessions: the source that states the note best decides. In beta
+                    # an observation merged an old dev-bucket runbook with this session's failed prod
+                    # attempt; the note repeated the agent's own last message (bucket name, "cannot
+                    # create buckets"), facts only this session's document held, quoted from the old one.
+                    # ponytail: a past rule this session restated verbatim ties, the newest (own) wins and
+                    # the note drops; prefer the older source on ties if real conflicts get lost.
+                    return source_document == own
             return found or source_document == own
         except Exception as e:  # unknown: the note stands
             logger.warning(f"session own-source check failed for {bank_id}: {e}")
@@ -1024,9 +1035,12 @@ class SessionService:
         try:
             memory = await self._engine.get_memory_unit(bank_id, memory_ids[0], request_context=rc)
             sources = []
-            for sid in ((memory or {}).get("source_memory_ids") or [])[:6]:
+            # Up to 12 source memories, one per document: with 6 an observation's newest source (the
+            # session's own document) could be left out, and the note was quoted from a source that
+            # did not state it.
+            for sid in ((memory or {}).get("source_memory_ids") or [])[:12]:
                 unit = await self._engine.get_memory_unit(bank_id, sid, request_context=rc)
-                if unit and unit.get("document_id"):
+                if unit and unit.get("document_id") and all(u["document_id"] != unit["document_id"] for u in sources):
                     sources.append(unit)
             if memory and memory.get("document_id"):
                 sources.append(memory)

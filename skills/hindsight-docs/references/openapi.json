@@ -20142,12 +20142,12 @@
           "credit_count": {
             "type": "integer",
             "title": "Credit Count",
-            "description": "Notes the agent told the user it used, each counted once: assistant lines carrying `From Hindsight memory (live session #<note seq>)`."
+            "description": "Notes the agent told the user it used, each counted once: assistant lines carrying `From Hindsight memory (live session #<note seq>)` or `**Thanks to Hindsight thought #<note seq>**`."
           },
           "dismissed_count": {
             "type": "integer",
             "title": "Dismissed Count",
-            "description": "Notes the agent told the user it did not need, each counted once: assistant lines carrying `Hindsight note (live session #<note seq>)`."
+            "description": "Notes the agent told the user it did not need, each counted once: assistant lines carrying `Hindsight note (live session #<note seq>)` or `Hindsight thought #<note seq>, set aside` / `, already done`."
           },
           "last_seq": {
             "type": "integer",

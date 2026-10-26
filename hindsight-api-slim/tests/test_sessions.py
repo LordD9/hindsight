@@ -800,3 +800,27 @@ async def test_a_note_whose_memories_are_all_gone_is_judged_by_its_quoted_source
     assert await s._from_this_session_only(bank, "s1", ["m1"], request_context, own_doc)
     assert not await s._from_this_session_only(bank, "s1", ["m1"], request_context, "chat:past")
     assert not await s._from_this_session_only(bank, "s1", ["m1"], request_context, None)
+
+
+async def test_a_note_from_a_mixed_memory_is_own_when_this_session_states_it_best(memory, request_context, monkeypatch):
+    """An observation merged an older session with this one: the note's quoted source decides."""
+    bank, s = _bank(), memory.sessions
+    await s.append(
+        bank,
+        "s1",
+        _req({"id": "1", "role": "user", "text": "Create the prod analytics bucket"}, retain="off"),
+        request_context=request_context,
+    )
+    own_doc = (await s.get(bank, "s1", request_context=request_context)).document_id
+    units = {
+        "obs": {"document_id": "chat:past", "source_memory_ids": ["old", "mine"]},
+        "old": {"document_id": "chat:past"},
+        "mine": {"document_id": own_doc},
+    }
+
+    async def get_memory_unit(bank_id, memory_id, request_context):
+        return units.get(memory_id)
+
+    monkeypatch.setattr(memory, "get_memory_unit", get_memory_unit)
+    assert await s._from_this_session_only(bank, "s1", ["obs"], request_context, own_doc)
+    assert not await s._from_this_session_only(bank, "s1", ["obs"], request_context, "chat:past")
