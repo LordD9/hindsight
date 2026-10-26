@@ -85,6 +85,39 @@ a 9B — so a green run means "extraction is sound on this model", not "the
 regression cannot return". The test that fails on that is
 `hindsight-api-slim/tests/test_fact_extraction_nullable_dimensions.py`.
 
+**`test_13` — retain capabilities.** `test_03` and `test_04` guard two regressions in
+depth; this is the breadth. Thirty-five cases in `hindsight_system_evals/retain_capabilities.py`,
+one per thing retain is supposed to do, each naming the prompt rule or issue behind it:
+
+| capability | what a case checks |
+|---|---|
+| selectivity | chatter stores nothing; plans survive among weather and croissants; a fact said three times is stored once |
+| completeness | exact figures, never rounded; sensory and emotional detail kept |
+| coreference | "my roommate" becomes Tamsin (the user's roommate) |
+| fact type | the user's rules are `world`, the agent's own actions `experience` (#775, #2440); a speaker named in context or metadata is the one credited (#3962) |
+| temporal | relative dates resolved; a year spans the year (#3933); no placeholder years (#5820, checked on every case); no event date, no invented date (#465) |
+| language | German, Chinese, Spanish stay in their language and script (#184, #4410, #4432) |
+| fidelity | hedges stay hedged, past states stay past, a corrected value wins, the prompt's examples never leak (#4284), instructions inside content are not obeyed |
+| mission | the retain mission filters what is kept, and outranks the generic selectivity rules |
+| mode | custom instructions, verbose detail, verbatim text, a named strategy chosen per item (#593) |
+| entities | named entities stored, one entity across documents |
+| entity labels | value, multi-value (as tags), free-text and map labels; labels-only mode stores no free-form entity |
+| inputs | metadata read, JSON conversations, a fact in the last chunk of a long document |
+
+A case is judged (a trap and the facts it must record, on the stored facts rendered with
+their type, dates and entities) and, where the API reports the answer exactly, checked
+deterministically (entities, labels, tags, verbatim text, fact counts). Nine cases run in
+minimum acceptance; `--full` runs all of them. It was built against dev Gemma
+(`gemma-4-26b-a4b`), a small model, over five full runs — every case passes on it at least
+once, and what fails on it is the model, not the case:
+
+- Spanish input stored as English facts, most runs (the #184 regression, on this model);
+- an emotional detail ("Marco was nervous") dropped, most runs;
+- now and then a whole input stored as **no facts**: the reply ran to the 4,096-token limit
+  and retain, unable to split a 224-character chunk further, dropped it and reported success
+  — or the model returned `{"facts": []}` for plain content. A case that stores nothing says
+  which, from the public LLM trace, instead of failing every criterion on "(no facts)".
+
 **`test_05` — refresh cost.** Not a quality grade: a baseline of what a
 knowledge-page refresh spends. Every LLM call the refresh makes is read back from
 `/llm-requests` — input, cached and output tokens, and the prompt — for a full
