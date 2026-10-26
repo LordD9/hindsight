@@ -780,3 +780,23 @@ async def test_a_note_is_quoted_from_the_source_that_states_its_rule(memory, req
         _bank(), ["obs"], "Revert the shared session: each query creates a fresh query session.", request_context
     )
     assert src is not None and src.document_id == "doc-old" and src.quote.startswith("Each query creates")
+
+
+async def test_a_note_whose_memories_are_all_gone_is_judged_by_its_quoted_source(memory, request_context, monkeypatch):
+    """The session's own save rewrote the note's only memory: its quote, the session's own, decides."""
+    bank, s = _bank(), memory.sessions
+    await s.append(
+        bank,
+        "s1",
+        _req({"id": "1", "role": "user", "text": "Pin the new release build"}, retain="off"),
+        request_context=request_context,
+    )
+
+    async def gone(bank_id, memory_id, request_context):
+        return None
+
+    monkeypatch.setattr(memory, "get_memory_unit", gone)
+    own_doc = (await s.get(bank, "s1", request_context=request_context)).document_id
+    assert await s._from_this_session_only(bank, "s1", ["m1"], request_context, own_doc)
+    assert not await s._from_this_session_only(bank, "s1", ["m1"], request_context, "chat:past")
+    assert not await s._from_this_session_only(bank, "s1", ["m1"], request_context, None)

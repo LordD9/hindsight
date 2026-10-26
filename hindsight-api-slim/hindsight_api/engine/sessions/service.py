@@ -852,7 +852,13 @@ class SessionService:
         # context: in beta it came back as a "past decision" (the agent's own earlier change, then the
         # user's new request) turn after turn, each time under a new memory id, and the agent dismissed
         # every one. A memory with any source outside this session is a real past decision and stays.
-        own = bool(text) and not error and await self._from_this_session_only(bank_id, session_id, memory_ids, rc)
+        own = (
+            bool(text)
+            and not error
+            and await self._from_this_session_only(
+                bank_id, session_id, memory_ids, rc, source.document_id if source else None
+            )
+        )
         elsewhere = (
             bool(text)
             and not error
@@ -963,12 +969,19 @@ class SessionService:
         return seq
 
     async def _from_this_session_only(
-        self, bank_id: str, session_id: str, memory_ids: list[str], rc: RequestContext
+        self,
+        bank_id: str,
+        session_id: str,
+        memory_ids: list[str],
+        rc: RequestContext,
+        source_document: str | None = None,
     ) -> bool:
         """Whether every memory the note used comes only from this session's own document (each memory
         and the memories it was built from). Unknown -> False: the note stands. A memory gone by now is
         skipped: in beta the session's own save rewrote it between the check and this lookup, and the
-        note, quoting only the session itself, went out. At least one memory must still be found."""
+        note, quoting only the session itself, went out. When none is found any more, the note's quoted
+        source decides: in beta a note's only memory was gone and its quote was this session's own
+        earlier message (a pin the agent had since found wrong)."""
         if not memory_ids:
             return False
         try:
@@ -993,7 +1006,7 @@ class SessionService:
                     docs.add((src or {}).get("document_id"))
                 if docs != {own}:
                     return False
-            return found
+            return found or source_document == own
         except Exception as e:  # unknown: the note stands
             logger.warning(f"session own-source check failed for {bank_id}: {e}")
             return False
