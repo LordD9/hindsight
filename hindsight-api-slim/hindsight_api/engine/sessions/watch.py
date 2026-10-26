@@ -518,6 +518,11 @@ def accept_note(state: WatchState, m: Moment, text: str, memory_ids: list[str]) 
     # not compared: going against it later is worth saying.
     if m.trigger != "task" and any(_overlap(text, c) >= 0.6 for c in state.conflicts):
         return False
+    # The same rule quoted word for word is the same rule, whatever file the work moved to: in beta
+    # "scoped to pointwise ranking only" came back on a bench script, the code and its docs within
+    # 8 minutes, each from a rewritten memory and under 0.6 overlap with the others.
+    if m.trigger != "task" and _quoted(text) & {q for c in state.conflicts for q in _quoted(c)}:
+        return False
     # A heads-up for a new request says nothing new when the session was already told the same rule:
     # in beta a dashboards rule came back, reworded, for the session's next request. (A conflict
     # after a heads-up still goes: that one says the work now breaks it.)
@@ -557,6 +562,11 @@ def readable(text: str) -> str:
             continue
         out.append(str(msg.get("content", "")) if isinstance(msg, dict) else line)
     return "\n".join(out)
+
+
+def _quoted(s: str) -> set[str]:
+    """The phrases of three words or more a note quotes ("..." or curly quotes), lowercased."""
+    return {q.strip().lower() for q in re.findall(r'["\u201c]([^"\u201c\u201d]+)["\u201d]', s) if len(q.split()) >= 3}
 
 
 def _words(s: str) -> set[str]:

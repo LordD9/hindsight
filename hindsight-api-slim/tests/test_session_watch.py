@@ -377,3 +377,18 @@ def test_a_follow_up_keeps_the_earlier_requests_for_conflict_checks():
     assert "EARLIER" not in W.situation(
         s.goal, W.Moment(trigger="task", text=s.goal, recent=[], diff=""), [], [], "", s.earlier_goals
     )
+
+
+def test_a_conflict_quoting_a_rule_already_quoted_is_a_repeat():
+    """The same quoted rule on another file, from a rewritten memory, does not go out again."""
+    s = W.WatchState()
+    cmd = W.Moment(trigger="command", text="python bench.py", recent=[], diff="")
+    first = 'Change `bench.py`: do not use pairwise selection; keep selection "scoped to pointwise ranking only".'
+    again = (
+        "Change `docs/configuration.mdx`: keep selection \u201cscoped to pointwise ranking only\u201d; do not "
+        'document "one small request per compared pair".'
+    )
+    other = 'Change `docs/configuration.mdx`: the default stays "prune candidates off by default".'
+    assert W.accept_note(s, cmd, first, ["m1"])
+    assert not W.accept_note(s, cmd, again, ["m2"])
+    assert W.accept_note(s, cmd, other, ["m3"])
